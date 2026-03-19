@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Edge Marker Racing</title>
+
+  <!-- Bootstrap & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+
+  <!-- Plotly -->
+  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+
+  <!-- c3.js (d3 v5 + c3) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/c3/0.7.20/c3.min.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.16.0/d3.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/c3/0.7.20/c3.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#f7faf8; --ink:#0c1411; --muted:#50625a;
+      --green:#0f3d2e; --green-2:#175945; --green-3:#1f7a5b;
+      --chip:#e9f2ee; --card:#ffffff; --border:#e3ece7; --gold:#c6971a;
+      --shadow:0 10px 24px rgba(7,25,18,.08);
+      --radius:14px; --pad:18px; --gutter:20px;
+      --brand-gap:18px;
+    }
+
+    html,body{ height:100%; }
+    body{
+      background:
+        radial-gradient(900px 360px at 8% -10%, rgba(19,90,69,.06), transparent 60%),
+        radial-gradient(900px 360px at 92% -10%, rgba(19,90,69,.06), transparent 60%),
+        linear-gradient(180deg, var(--bg) 0%, #f4faf6 70%, var(--bg) 100%);
+      color:var(--ink);
+      font-family:"Noto Sans KR", system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    }
+
+    /* Topbar */
+    .topbar{
+      background:linear-gradient(90deg, var(--green), #0d3327);
+      border-bottom:1px solid rgba(255,255,255,.08);
+      color:#fff; position:sticky; top:0; z-index:1000;
+    }
+    .container-narrow{ max-width:1240px; margin-inline:auto; }
+
+    @media (min-width: 992px){
+      .topbar .container-narrow{ display:flex; align-items:center; }
+      #navMain{ display:flex !important; align-items:center; flex:1 1 auto; }
+    }
+
+    .navbar-brand{
+      color:#fff; font-weight:800; letter-spacing:.2px; text-decoration:none;
+      margin-right: var(--brand-gap);
+      white-space:nowrap;
+    }
+    .navbar-brand i{ color:#c6971a; margin-right:.5rem; }
+
+    .menu-nav{ gap:32px; margin-right:auto; }
+    .navbar-dark .nav-link{
+      color:#eaf5f0; font-weight:700; padding:.5rem .9rem; border-radius:8px;
+    }
+    .navbar-dark .nav-link:hover{ background:#1a3f32; color:#fff; }
+    .navbar-dark .nav-link.active{ background:#1e4b3b; color:#fff; border:1px solid rgba(255,255,255,.15); }
+    @media (max-width:992px){ .menu-nav{ gap:10px; } }
+
+    .hdr-tray{ display:flex; align-items:center; gap:.6rem; margin-left:auto; }
+    .hdr-search{ width:280px; }
+    .hdr-search .input-group-text{ background:#eaf5f0; border-color:#d5ebe1; }
+    .hdr-search input{ border-color:#d5ebe1; }
+    .hdr-login{
+      background:linear-gradient(180deg,#ffd766,#f0c24d);
+      color:#3b2b00; border:1px solid #e8bb44; font-weight:800;
+      box-shadow:var(--shadow);
+      white-space:nowrap;
+    }
+    @media (max-width:992px){
+      .hdr-search{ width:100%; margin-top:.5rem; }
+      .hdr-tray{ width:100%; flex-wrap:wrap; }
+    }
+
+    /* Grid */
+    .grid-3{
+      display:grid; gap: var(--gutter);
+      grid-template-columns: 280px 1fr 360px;
+      align-items:start;
+    }
+    @media (max-width: 1200px){ .grid-3{ grid-template-columns: 250px 1fr 320px; } }
+    @media (max-width: 992px){ .grid-3{ grid-template-columns: 1fr; } }
+
+    /* Panels */
+    .panel{ background:var(--card); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); }
+    .panel-header{ padding:12px var(--pad); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+    .panel-title{ margin:0; font-weight:800; color:var(--green); display:flex; gap:.5rem; align-items:center; }
+    .panel-body{ padding:14px var(--pad) 16px; }
+    .tag{ background:var(--chip); color:#175945; border:1px solid #d8ebe3; font-weight:700; border-radius:999px; padding:.28rem .6rem; }
+
+    /* Sidebar */
+    .side .list-group-item{ border:none; border-radius:10px; margin-bottom:8px; padding:10px 12px; background:#f3f8f5; color:#294a3d; }
+    .side .list-group-item.active{ background:#e7f2ed; color:#0f3d2e; font-weight:800; }
+    /* 4개 항목으로 줄어든 빠른 필터 리스트의 높이를 경기 일정과 맞추기 위해 마지막 항목의 마진 제거 */
+    .side .list-group-item:last-child {
+      margin-bottom: 0;
+    }
+
+
+
+    /* Race cards */
+    .race-card{ border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:12px; background:#fff; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    .race-card .meta{ color:var(--muted); font-size:.92rem; }
+
+    /* Tables */
+    .table thead th{ background:#f4faf6; border-bottom:1px solid var(--border); color:#11382a; }
+    .table td, .table th{ vertical-align:middle; }
+
+    /* Charts */
+    .chart-box{ height:300px; } /* 상금 TOP 6 차트는 310px 유지 */
+    .chart-box-tall{ height:255px; } /* ✅ 승률 추이 차트의 높이를 265px로 설정합니다. */
+
+    /* [NEW] '승률 TOP 6' 차트의 높이를 310px로 재정의하여 상단 공간 확보 */
+    #winrateBarH { height: 300px; }
+
+    /* Leaders */
+    .leader{ display:flex; align-items:center; gap:12px; justify-content:space-between; padding:10px 12px; border:1px solid var(--border); border-radius:12px; background:#fbfdfc; margin-bottom:8px; }
+    .badge-rank{ width:34px; height:34px; border-radius:8px; display:grid; place-items:center; background:linear-gradient(180deg, #ffd66a, #eabb47); color:#3b2b00; font-weight:800; border:1px solid #d5a63a; }
+    .leader .name{ font-weight:800; color:#0f2a1f; }
+    .leader .sub{ color:#50625a; font-size:.9rem; }
+
+    /* Jockey Album */
+    .jockey-grid{ display:grid; grid-template-columns: repeat(3, 1fr); gap:14px; }
+    @media (max-width:992px){ .jockey-grid{ grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width:576px){ .jockey-grid{ grid-template-columns: 1fr; } }
+    .jockey-card{ position: relative; height: 220px; border:1px solid var(--border); border-radius:12px; overflow:hidden; background:#fff; }
+    .jockey-photo{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; transform:scale(1); transition:transform .35s ease; }
+    .jockey-card:hover .jockey-photo{ transform:scale(1.03); }
+    .jockey-overlay{ position:absolute; left:0; right:0; bottom:0; padding:12px 14px; background:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.65) 60%, rgba(0,0,0,.85) 100%); color:#fff; }
+    .jockey-name{ font-weight:800; letter-spacing:.2px; margin:0 0 2px; line-height:1.1; }
+    .jockey-meta{ font-size:.9rem; opacity:.95; display:flex; gap:10px; flex-wrap:wrap; }
+    .jockey-meta .dot::before{ content:"·"; margin:0 6px; opacity:.7; }
+
+    /*.c3-pair .chart-box{ height:280px; } */
+
+    /* Promo hero */
+    .promo-hero .card { border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow); overflow:hidden; }
+    .promo-hero .card-img-top{ height:360px; object-fit:cover; }
+    @media (max-width:576px){ .promo-hero .card-img-top{ height:240px; } }
+    .promo-hero .carousel-indicators [data-bs-target]{ background:#95b9a9; }
+    .promo-hero .carousel-control-prev, .promo-hero .carousel-control-next { width:5%; }
+
+     a.jockey-link { display:block; text-decoration:none; color:inherit; }
+     a.jockey-link:hover .jockey-photo{ transform: scale(1.03); }
+  </style>
+</head>
+<body>
+
+  <!-- Topbar -->
+  <nav class="topbar navbar navbar-expand-lg navbar-dark">
+    <div class="container-narrow">
+      <a class="navbar-brand" href="/"><i class="fa-solid fa-horse"></i> Edge Marker Racing</a>
+
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain" aria-controls="navMain" aria-expanded="false" aria-label="메뉴 열기">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navMain">
+        <ul class="navbar-nav menu-nav mb-2 mb-lg-0">
+          <!-- ✅ 절대경로로 수정 -->
+          <li class="nav-item"><a class="nav-link" href="/entries"><i class="fa-regular fa-clipboard"></i> 출전정보</a></li>
+          <li class="nav-item"><a class="nav-link" href="/results"><i class="fa-regular fa-flag"></i> 레이스결과</a></li>
+          <li class="nav-item"><a class="nav-link" href="/horses"><i class="fa-solid fa-horse-head"></i> 경주마정보</a></li>
+          <li class="nav-item"><a class="nav-link" href="/jockeys"><i class="fa-solid fa-user-ninja"></i> 기수정보</a></li>
+        </ul>
+
+        <div class="hdr-tray ms-lg-3">
+          <form class="hdr-search d-none d-lg-block" onsubmit="return false;">
+            <div class="input-group input-group-sm">
+              <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
+              <input class="form-control" type="search" placeholder="검색…" aria-label="검색">
+            </div>
+          </form>
+
+          {% if session.get('SESS_KEY_UNAME') %}
+            <a href="/logout" class="btn hdr-login btn-sm">
+              <i class="fa-solid fa-right-from-bracket"></i> 로그아웃
+            </a>
+          {% else %}
+            <a href="/login" class="btn hdr-login btn-sm">
+              <i class="fa-solid fa-right-to-bracket"></i> 로그인
+            </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <main class="container-narrow my-3">
+
+    <!-- Promo hero -->
+    <section class="promo-hero mb-3">
+      <div id="promoCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="3200">
+        <div class="carousel-indicators">
+          <button type="button" data-bs-target="#promoCarousel" data-bs-slide-to="0" class="active"></button>
+          <button type="button" data-bs-target="#promoCarousel" data-bs-slide-to="1"></button>
+          <button type="button" data-bs-target="#promoCarousel" data-bs-slide-to="2"></button>
+        </div>
+
+        <div class="carousel-inner">
+          <div class="carousel-item active">
+            <div class="card h-100">
+              <img src="{{ url_for('static', filename='img/main/horse_race_main_4.svg') }}" class="card-img-top" alt="코리아컵">
+
+              <div class="card-body">
+                <h5 class="mb-1 fw-bold" style="color:var(--green);">코리아컵</h5>
+                <div class="small text-muted">얼리버드 배당 · 현장 응원단 이벤트</div>
+              </div>
+            </div>
+          </div>
+          <div class="carousel-item">
+            <div class="card h-100">
+              <img src="{{ url_for('static', filename='img/main/horse_race_main_3.svg') }}" class="card-img-top" alt="한강 스프린트">
+              <div class="card-body">
+                <h5 class="mb-1 fw-bold" style="color:var(--green);">한강 스플린트</h5>
+                <div class="small text-muted">1200m 스피드 레이스</div>
+              </div>
+            </div>
+          </div>
+          <div class="carousel-item">
+            <div class="card h-100">
+              <img src="{{ url_for('static', filename='img/main/horse_race_main_2.svg') }}" class="card-img-top" alt="동해상배">
+              <div class="card-body">
+                <h5 class="mb-1 fw-bold" style="color:var(--green);">동해상배</h5>
+                <div class="small text-muted">제주도 페스티벌 & 2000M 장거리 레이스</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button class="carousel-control-prev" type="button" data-bs-target="#promoCarousel" data-bs-slide="prev">
+          <span class="carousel-control-prev-icon"></span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#promoCarousel" data-bs-slide="next">
+          <span class="carousel-control-next-icon"></span>
+        </button>
+      </div>
+    </section>
+
+    <!-- 3-column Grid -->
+    <div class="grid-3">
+      <!-- LEFT -->
+      <aside class="side">
+
+        <div class="panel mb-3">
+          <div class="panel-header"><h5 class="panel-title"><i class="fa-solid fa-chart-bar"></i> 실시간 베팅 TOP 6</h5><small class="text-soft"></small></div>
+          <div class="panel-body"><div id="c3Bar" class="chart-box"></div></div>
+        </div>
+
+
+        <div class="panel mb-3">
+          <div class="panel-header">
+            <h6 class="panel-title"><i class="fa-solid fa-filter"></i> 빠른 필터</h6><span class="tag">LIVE</span>
+          </div>
+          <div class="panel-body">
+            <ul class="list-group">
+              <li class="list-group-item active">오늘 (서울)</li>
+              <li class="list-group-item">오늘 (부산)</li>
+              <li class="list-group-item">오늘 (제주)</li>
+              <li class="list-group-item">내일 일정</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="panel mb-3">
+          <div class="panel-header"><h6 class="panel-title"><i class="fa-solid fa-bookmark"></i> 즐겨찾기</h6></div>
+          <div class="panel-body">
+            <div class="d-grid gap-2">
+              <button class="btn btn-outline-secondary btn-sm">청풍 — Follow</button>
+              <button class="btn btn-outline-secondary btn-sm">지평선 — Follow</button>
+              <button class="btn btn-outline-secondary btn-sm">칠성 — Follow</button>
+            </div>
+          </div>
+        </div>
+
+
+        <div class="panel mb-3">
+          <div class="panel-header"><h5 class="panel-title"><i class="fa-solid fa-gauge-high"></i> 트랙 컨디션 & 날씨</h5><small class="text-soft">실시간</small></div>
+          <div class="panel-body">
+            <div class="leader"><div class="d-flex align-items-center gap-2"><span class="badge-rank">S</span><div><div class="name">서울</div><div class="sub">Fast · 22°C · 습도 48%</div></div></div><span class="tag">맑음</span></div>
+            <div class="leader"><div class="d-flex align-items-center gap-2"><span class="badge-rank">B</span><div><div class="name">부산</div><div class="sub">Good · 24°C · 습도 55%</div></div></div><span class="tag">맑음</span></div>
+            <div class="leader"><div class="d-flex align-items-center gap-2"><span class="badge-rank">J</span><div><div class="name">제주</div><div class="sub">Standard · 21°C · 습도 52%</div></div></div><span class="tag">구름</span></div>
+          </div>
+        </div>
+
+      </aside>
+
+      <!-- CENTER -->
+      <section>
+        <div class="panel mb-3">
+          <div class="panel-header">
+            <h5 class="panel-title"><i class="fa-regular fa-calendar-day"></i> 오늘의 레이스</h5>
+            <span class="tag">서울 · 부산 · 제주</span>
+          </div>
+          <div class="panel-body">
+            <div class="race-card">
+              <div><div class="fw-bold">서울 R4 · 1800m · 1군</div><div class="meta">출발 14:40 · 우천 없음 · 트랙 Fast</div></div>
+              <a class="btn btn-sm btn-outline-success" href="#"><i class="fa-solid fa-coins"></i> 배팅</a>
+            </div>
+            <div class="race-card">
+              <div><div class="fw-bold">부산 R2 · 1400m · 2군</div><div class="meta">출발 15:20 · 맑음 · 트랙 Good</div></div>
+              <a class="btn btn-sm btn-outline-success" href="#"><i class="fa-solid fa-coins"></i> 배팅</a>
+            </div>
+            <div class="race-card">
+              <div><div class="fw-bold">제주 R5 · 2000m · 오픈</div><div class="meta">출발 16:10 · 흐림 · 트랙 Standard</div></div>
+              <a class="btn btn-sm btn-outline-success" href="#"><i class="fa-solid fa-coins"></i> 배팅</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel mb-3">
+          <div class="panel-header">
+            <h5 class="panel-title"><i class="fa-regular fa-calendar-days"></i> 경기 일정</h5>
+            <small class="text-soft">오늘 · 전체</small>
+          </div>
+          <div class="panel-body">
+            <div class="table-responsive">
+              <table class="table table-sm align-middle">
+                <thead><tr><th>시간</th><th>경주명</th><th>장소</th><th>거리</th><th>등급</th><th>액션</th></tr></thead>
+                <tbody id="scheduleBody">
+                  <tr><td>14:40</td><td>청룡상</td><td>서울</td><td>1800m</td><td>1군</td><td><button class="btn btn-sm btn-outline-success">배팅</button></td></tr>
+                  <tr><td>15:20</td><td>천룡배</td><td>부산</td><td>1400m</td><td>2군</td><td><button class="btn btn-sm btn-outline-success">배팅</button></td></tr>
+                  <tr><td>16:10</td><td>한빛상</td><td>제주</td><td>2000m</td><td>오픈</td><td><button class="btn btn-sm btn-outline-success">배팅</button></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Jockey Album -->
+        <section class="mb-3">
+          <div class="panel">
+            <div class="panel-header">
+              <h5 class="panel-title"><i class="fa-solid fa-id-card-clip"></i> 기수 앨범</h5>
+              <small class="text-soft">고정 3명</small>
+            </div>
+            <div class="panel-body">
+
+  <div class="jockey-grid">
+
+    <!-- 이성재 -->
+    <a class="jockey-link" href="/jockeys/이성재" aria-label="이성재 프로필">
+      <div class="jockey-card">
+        <img class="jockey-photo"
+             src="/static/img/jockey/이성재.jpg"
+             onerror="this.onerror=null;this.src='/static/img/jockey/이성재.png';"
+             alt="이성재">
+        <div class="jockey-overlay">
+          <div class="jockey-name">이성재</div>
+          <div class="jockey-meta">
+            <span>2025년 출전: 1위 41회</span><span class="dot"></span><span>승률 13.4%</span>
+          </div>
+        </div>
+      </div>
+    </a>
+
+    <!-- 진겸 -->
+    <a class="jockey-link" href="/jockeys/진겸" aria-label="진겸 프로필">
+      <div class="jockey-card">
+        <img class="jockey-photo"
+             src="/static/img/jockey/진겸.jpg"
+             onerror="this.onerror=null;this.src='/static/img/jockey/진겸.png';"
+             alt="진겸">
+        <div class="jockey-overlay">
+          <div class="jockey-name">진겸</div>
+          <div class="jockey-meta">
+            <span>2025년 출전: 1위 36회</span><span class="dot"></span><span>승률 11.5%</span>
+          </div>
+        </div>
+      </div>
+    </a>
+
+    <!-- 이효식 -->
+    <a class="jockey-link" href="/jockeys/이효식" aria-label="이효식 프로필">
+      <div class="jockey-card">
+        <img class="jockey-photo"
+             src="/static/img/jockey/이효식.jpg"
+             onerror="this.onerror=null;this.src='/static/img/jockey/이효식.png';"
+             alt="이효식">
+        <div class="jockey-overlay">
+          <div class="jockey-name">이효식</div>
+          <div class="jockey-meta">
+            <span>2025년 출전: 1위 35회</span><span class="dot"></span><span>승률 9.6%</span>
+          </div>
+        </div>
+      </div>
+    </a>
+
+  </div>
+</div>
+
+        </section>
+
+        <!-- c3 charts pair -->
+        <div class="panel mb-3">
+          <div class="panel-header">
+            <h5 class="panel-title"><i class="fa-solid fa-chart-line"></i> 승률 추이</h5>
+            <small class="text-soft">청풍 vs 지평선</small>
+          </div>
+          <div class="panel-body">
+            <div id="c3Line" class="chart-box-tall"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT -->
+      <aside>
+        <div class="panel mb-3">
+          <div class="panel-header"><h5 class="panel-title"><i class="fa-solid fa-trophy" style="color:#c6971a;"></i> 상금 TOP 6</h5><small class="text-soft">2024</small></div>
+          <div class="panel-body">
+            <div id="prizeBar" class="chart-box"></div>
+            <div id="prizeLeaders" class="mt-2"></div>
+          </div>
+        </div>
+
+        <div class="panel mb-3">
+          <div class="panel-header">
+            <h5 class="panel-title"><i class="fa-solid fa-ranking-star" style="color:#1f7a5b;"></i> 승률 TOP 6</h5>
+          </div>
+          <div class="panel-body">
+            <div class="mb-3 text-end">
+                <span class="tag">최근 1년</span>
+            </div>
+            <div id="winrateBarH" class="chart-box"></div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+  </main>
+
+  <footer class="py-4 mt-4">
+    <div class="container-narrow text-center">© 2025 Edge Marker · All Rights Reserved</div>
+  </footer>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Promo carousel init -->
+  <script>
+    const promo = document.querySelector('#promoCarousel');
+    if (promo) new bootstrap.Carousel(promo, { interval: 3200, ride: 'carousel' });
+  </script>
+
+  <!-- App scripts (Plotly / c3 등) -->
+  <script>
+    async function safeGet(url){
+      try{ const r = await fetch(url, {cache:'no-store'}); if(!r.ok) throw new Error(r.status); return await r.json(); }
+      catch(e){ return null; }
+    }
+    async function renderPrizeTop(){
+      const el = document.getElementById('prizeBar');
+      const list = document.getElementById('prizeLeaders');
+      let data = await safeGet('/api/top?n=6&year=2024');
+      if(!Array.isArray(data) || !data.length){
+        data = [
+          {horse_name:'청풍', prize_money:6.49e15},
+          {horse_name:'풍운아', prize_money:5.78e15},
+          {horse_name:'한빛', prize_money:5.60e15},
+          {horse_name:'백설', prize_money:4.94e15},
+          {horse_name:'흑룡', prize_money:4.89e15},
+          {horse_name:'지평선', prize_money:4.81e15},
+        ];
+      }
+      data = data.filter(d=>d.horse_name && d.prize_money!=null).sort((a,b)=>b.prize_money-a.prize_money).slice(0,6);
+      const x = data.map(d=>d.horse_name), y = data.map(d=>+d.prize_money);
+      Plotly.newPlot(el, [{ type:'bar',
+        x, y,
+        marker:{ color:'#1f7a5b' },
+        hovertemplate:'<b>%{x}</b><br>상금: %{y:,.0f}₩<extra></extra>'}],
+      {
+        // 1. 왼쪽 여백을 120으로 설정하여 숫자가 잘리지 않도록 함
+        margin:{l:40,r:10,t:8,b:34},
+
+        xaxis:{ tickfont:{size:12,color:'#345'} },
+
+        // 2. Y축 금액 포맷을 간소화된 약어 표기법(.2s)으로 변경 (예: T = Trillion, 조)
+        yaxis:{ tickformat:'.2s', gridcolor:'#edf3ef' },
+
+        plot_bgcolor:'#ffffff', paper_bgcolor:'rgba(0,0,0,0)',
+      }, {displayModeBar:false, responsive:true});
+      //-------------------------메인화면 TOP6 링크------------------------------------------------
+      list.innerHTML = data.map((d,i)=>{
+        // 1. 말이름을 URL에 안전하게 사용하기 위해 인코딩합니다. (예: '청풍' -> '%EC%B2%AD%ED%92%8D')
+        const encodedName = encodeURIComponent(d.horse_name);
+
+        // 2. 항목 전체를 <a> 태그로 감싸고 href 속성에 링크를 설정합니다.
+        return `
+          <a href="/horses/${encodedName}" class="leader">
+            <div class="d-flex align-items-center gap-2">
+              <span class="badge-rank">${i+1}</span>
+              <div><div class="name">${d.horse_name}</div><div class="sub">₩ ${(+d.prize_money).toLocaleString()}</div></div>
+            </div><span class="tag">TOP</span>
+          </a>`
+      }).join('');
+      //--------------------------------------------------------------
+
+    }
+    async function renderWinrateTop(){
+      const el = document.getElementById('winrateBarH');
+      let data = [
+        {horse_name:'청풍', win_rate:0.44},
+        {horse_name:'지평선', win_rate:0.40},
+        {horse_name:'칠성', win_rate:0.38},
+        {horse_name:'용맹호', win_rate:0.35},
+        {horse_name:'비상', win_rate:0.32},
+        // 6번째 항목 추가
+        {horse_name:'태풍', win_rate:0.30},
+      ];
+
+      data.sort((a, b) => b.win_rate - a.win_rate);
+
+      const horse_names = data.map(d => d.horse_name);
+      const win_rates = data.map(d => Math.round(d.win_rate * 100));
+
+      // 텍스트에 말 이름과 승률 모두 포함
+      const full_labels = horse_names.map((name, i) => `${name} | ${win_rates[i]}%`);
+
+      // 1. 100% 배경 막대 (Back Bar)
+      const backgroundBar = {
+        type: 'bar',
+        orientation: 'h',
+        y: horse_names,
+        x: horse_names.map(() => 100),
+        marker: { color: '#e0f1e8' },
+        hoverinfo: 'none',
+        showlegend: false
+      };
+
+      // 2. 실제 승률 막대 (Foreground Bar)
+      const foregroundBar = {
+        type: 'bar',
+        orientation: 'h',
+        y: horse_names,
+        x: win_rates,
+        text: full_labels, // 말 이름과 승률 텍스트
+        textposition: 'inside',
+        insidetextanchor: 'start', // 텍스트를 막대 시작점(왼쪽)에 고정
+        textfont: {
+          color: 'white',
+          size: 14,
+          weight: 'bold'
+        },
+        marker: { color: '#1f7a5b' },
+        hovertemplate: '<b>%{y}</b><br>승률: %{x}%<extra></extra>',
+        showlegend: false
+      };
+
+      Plotly.newPlot(el, [backgroundBar, foregroundBar], {
+        barmode: 'overlay',
+        // 좌측 마진을 최소화
+        margin:{l:4,r:10,t:8,b:10},
+
+        // X축 (승률)
+        xaxis:{
+            range:[0,100],
+            showticklabels: false,
+            showgrid: false,
+            zeroline: false
+        },
+        // Y축 레이블 숨기기
+        yaxis:{
+            showticklabels: false,
+            showgrid: false,
+        },
+        // ✅ 높이를 310px로 조정 (6개 항목에 맞춤)
+        height: 310,
+        plot_bgcolor:'#ffffff', paper_bgcolor:'rgba(0,0,0,0)',
+      }, {displayModeBar:false, responsive:true});
+    }
+    function renderC3(){
+      c3.generate({
+        bindto: '#c3Bar',
+        data: { columns: [['청풍',34],['지평선',28],['칠성',22],['용맹호',10],['비상',6],['태풍',4]],
+          type:'donut',
+          colors:{
+            '청풍':'#1f7a5b',
+            '지평선':'#2aa36f',
+            '칠성':'#5cc59b',
+            '용맹호':'#8adbb9',
+            '비상':'#bfeadd',
+            '태풍':'#d5ede3'
+          },
+          // ✅ names 설정 제거: C3 도넛/파이 차트가 자동으로 퍼센트를 계산하여 레이블에 표시합니다.
+        },
+        donut: {
+          title: "베팅 점유율",
+          width: 30
+        },
+        // ✅ axis 관련 Bar 차트 설정 제거 (도넛 차트에서는 사용하지 않음)
+        // legend:{ position:'right' },
+        padding:{ top:10, right:10, bottom:20, left:10 } // 좌측 패딩을 줄여 공간 확보
+      });
+      c3.generate({
+        bindto: '#c3Line',
+        data:{ columns:[['청풍',42,45,44,41,43,44],['지평선',38,39,40,41,40,40]], type:'spline',
+          colors:{ '청풍':'#1f7a5b','지평선':'#2aa36f'} },
+        axis:{ x:{ type:'category', categories:['R-5','R-4','R-3','R-2','R-1','R'] }, y:{ max:60, tick:{ format:d=>d+'%' }, padding:{top:0,bottom:0} } },
+        point:{ r:3 }, legend:{ position:'right' }, padding:{ top:10, right:10, bottom:20, left:42 }
+      });
+    }
+    document.addEventListener('DOMContentLoaded', ()=>{
+      renderPrizeTop();
+      renderWinrateTop();
+      renderC3();
+    });
+  </script>
+</body>
+</html>
