@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>경주마 상세정보 | Edge Marker Racing</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg:#f7faf8; --ink:#0c1411; --muted:#50625a;
+      --green:#0f3d2e; --border:#e3ece7; --gold:#c6971a;
+      --shadow:0 10px 24px rgba(7,25,18,.08); --radius:14px; --brand-gap:18px;
+    }
+    body{ background:#f7fbf8; color:#0c1411; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; }
+    .container-narrow{ max-width:1240px; margin-inline:auto; }
+    .topbar{ background:linear-gradient(90deg, #0f3d2e, #0d3327); border-bottom:1px solid rgba(255,255,255,.08); color:#fff; position:sticky; top:0; z-index:1000; }
+    @media (min-width:992px){ .topbar .container-narrow{ display:flex; align-items:center; } #navMain{ display:flex !important; align-items:center; flex:1 1 auto; } }
+    .navbar-brand{ color:#fff; font-weight:800; letter-spacing:.2px; text-decoration:none; margin-right:var(--brand-gap); white-space:nowrap; }
+    .navbar-brand i{ color:#c6971a; margin-right:.5rem; }
+    .menu-nav{ gap:32px; margin-right:auto; }
+    .navbar-dark .nav-link{ color:#eaf5f0; font-weight:700; padding:.5rem .9rem; border-radius:8px; display:inline-flex; align-items:center; gap:.4rem; }
+    .navbar-dark .nav-link:hover{ background:#1a3f32; color:#fff; }
+    .navbar-dark .nav-link.active{ background:transparent; color:#fff; border:1px solid rgba(255,255,255,.35); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); }
+    .hdr-tray{ display:flex; align-items:center; gap:.6rem; margin-left:auto; }
+    .hdr-login{ background:linear-gradient(180deg,#ffd766,#f0c24d); color:#3b2b00; border:1px solid #e8bb44; font-weight:800; box-shadow:var(--shadow); white-space:nowrap; }
+
+    .panel{ background:#fff; border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); }
+    .panel-header{ padding:14px 18px; border-bottom:1px solid var(--border); }
+    .panel-body{ padding:18px; }
+    .title{ font-weight:800; color:#0f3d2e; }
+
+    .profile-wrap{ display:grid; grid-template-columns: 360px 1fr; gap:18px; }
+    @media (max-width: 992px){ .profile-wrap{ grid-template-columns:1fr; } }
+
+    .profile-photo{ width:100%; height:480px; object-fit:cover; border-radius:12px; border:1px solid var(--border); }
+
+    .profile-grid{ display:grid; grid-template-columns: 140px 1fr; gap:10px 14px; align-items:center; }
+    .profile-grid .label{ background:#f4faf6; border:1px solid var(--border); border-radius:8px; padding:.5rem .6rem; font-weight:700; color:#123; text-align:center; }
+    .profile-grid .val{ background:#fff; border:1px solid var(--border); border-radius:8px; padding:.55rem .75rem; }
+    .big-stat{ display:flex; gap:14px; margin-top:12px; flex-wrap:wrap; }
+    .big-stat .stat{ background:#eef6f2; border:1px solid #d6ebe3; color:#165f40; padding:.6rem .8rem; border-radius:10px; font-weight:800; }
+    .chart-square-half {
+      max-width: 800px;  /* 너비 지정 */
+      margin-left: auto; /* 왼쪽 여백 자동 */
+      margin-right: auto; /* 오른쪽 여백 자동 */
+    }
+  .chart-container-800-sq canvas {
+    display: block;
+    }
+  </style>
+</head>
+<body>
+
+<nav class="topbar navbar navbar-expand-lg navbar-dark">
+  <div class="container-narrow">
+    <a class="navbar-brand d-flex align-items-center" href="/">
+      <i class="fa-solid fa-horse me-2"></i> Edge Marker Racing
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navMain">
+      <ul class="navbar-nav menu-nav mb-2 mb-lg-0">
+        <li class="nav-item">
+          <a class="nav-link" href="/entries">
+            <i class="fa-regular fa-clipboard me-1"></i> 출전정보
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/results">
+            <i class="fa-regular fa-flag me-1"></i> 레이스결과
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link active" href="/horses">
+            <i class="fa-solid fa-horse-head me-1"></i> 경주마정보
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/jockeys">
+            <i class="fa-solid fa-user-ninja me-1"></i> 기수정보
+          </a>
+        </li>
+      </ul>
+
+      <div class="hdr-tray ms-lg-3">
+        <!-- ✅ 검색창 (results.html과 동일) -->
+        <form class="hdr-search d-none d-lg-block" onsubmit="return false;">
+          <div class="input-group input-group-sm">
+            <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
+            <input class="form-control" type="search" placeholder="검색…" aria-label="검색">
+          </div>
+        </form>
+        <a href="/login" class="btn hdr-login btn-sm ms-2">
+          <i class="fa-solid fa-right-to-bracket me-1"></i> 로그인
+        </a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+
+<!-- 서버에서 Jinja로 말 이름을 넘겨줄 수 있으면 data-horse에 넣어주세요 -->
+<div class="container-narrow my-3" id="horseProfilePage" data-horse="{% if profile %}{{ profile['이름'] | e }}{% endif %}">
+  <div class="panel">
+    <div class="panel-header">
+      {% if profile %}
+        <h3 class="title mb-0"><i class="fa-solid fa-horse-head"></i> {{ profile["이름"] }} 상세정보</h3>
+      {% else %}
+        <h3 class="title mb-0">상세정보</h3>
+      {% endif %}
+    </div>
+    <div class="panel-body">
+      {% if error %}
+        <div class="alert alert-warning mb-0">{{ error }}</div>
+      {% elif profile %}
+        <div class="profile-wrap">
+          <img class="profile-photo" src="{{ profile['photo_url'] }}" alt="{{ profile['이름'] }}">
+          <div>
+            <div class="profile-grid">
+              <div class="label">이름</div><div class="val"><span id="fld-name">{{ profile["이름"] }}</span></div>
+              <div class="label">나이</div><div class="val"><span id="fld-age">{{ profile["나이"] }}</span></div>
+              <div class="label">말품종</div><div class="val"><span id="fld-breed">{{ profile["말품종"] }}</span></div>
+              <div class="label">전략</div><div class="val"><span id="fld-strategy">{{ profile["전략"] }}</span></div>
+              <div class="label">마주이름</div><div class="val"><span id="fld-owner">{{ profile["마주이름"] }}</span></div>
+              <div class="label">조교사이름</div><div class="val"><span id="fld-trainer">{{ profile["조교사이름"] }}</span></div>
+              <div class="label">생산자</div><div class="val"><span id="fld-producer">{{ profile["생산목장"] }}</span></div>
+              <div class="label">최근경주일</div><div class="val"><span id="fld-last">{{ profile["최근경주일"] }}</span></div>
+            </div>
+            <div class="big-stat">
+              <div class="stat">총상금 {{ profile["총상금"] }}</div>
+              <div class="stat">승률 {{ profile["승률"] }}</div>
+            </div>
+          </div>
+        </div>
+      {% else %}
+        <div class="text-muted">표시할 프로필이 없습니다.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- 2023–2025 prize_money 바 차트 -->
+  <div class="panel mt-3">
+    <div class="panel-header">
+      <h5 class="mb-0"><i class="fa-solid fa-chart-column me-1"></i> 2023–2025 연도별 상금(prize_money)</h5>
+    </div>
+    <div class="panel-body">
+      <div class="chart-square-half">
+      <canvas id="prizeBarChart" height="120" aria-label="연도별 상금 차트"></canvas>
+      </div>
+      <div class="text-muted small mt-2">* <code>/data/horse_racing_prize.csv</code> 기준 집계</div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+<script>
+/* ---------------------------
+   A) 프로필 필드 자동 매핑
+   - horse_list.csv  → 이름/나이/말품종/마주이름/조교사이름/생산자/최근경주일
+   - horse_racing_prize.csv → 전략(strategy)
+   - HORSE 감지 강화: data-horse → URL → 타이틀
+   --------------------------- */
+(function(){
+  const host = document.getElementById('horseProfilePage');
+  let HORSE = (host?.dataset?.horse || '').trim();
+
+  // /horses/<name> 또는 ?name=... 지원
+  if (!HORSE) {
+    const url = new URL(window.location.href);
+    HORSE = (url.searchParams.get('name') || '').trim();
+  }
+  if (!HORSE) {
+    const parts = window.location.pathname.split('/').filter(Boolean);
+    const idx = parts.findIndex(p => p.toLowerCase() === 'horses');
+    if (idx >= 0 && parts[idx+1]) HORSE = decodeURIComponent(parts[idx+1]);
+  }
+  if (!HORSE) {
+    const h3 = document.querySelector('.panel-header .title');
+    if (h3) HORSE = h3.textContent.replace(/상세정보.*/,'').trim();
+  }
+  if (!HORSE) return;
+
+  function pickCol(cols, aliases){
+    for (const a of aliases){ if (cols.includes(a)) return a; }
+    const lower = cols.map(c => c.toLowerCase());
+    for (const a of aliases){
+      const al = a.toLowerCase();
+      const idx = lower.findIndex(c => c === al || c.includes(al));
+      if (idx >= 0) return cols[idx];
+    }
+    return null;
+  }
+  function setText(id, val){
+    const el = document.getElementById(id);
+    if (el && val!=null && String(val).trim()!=='') el.textContent = val;
+  }
+
+  // 1) /data/horse_list.csv → 기본 인적/프로필
+  Papa.parse('/data/horse_list.csv?v=1', {
+    download: true, header: true, skipEmptyLines: true, encoding: 'utf-8',
+    complete: ({data: rows=[]}) => {
+      if (!rows.length) return;
+      const cols = Object.keys(rows[0] || {});
+      const cName     = pickCol(cols, ["이름","name","horse_name","말이름"]);
+      const cAge      = pickCol(cols, ["나이","age"]);
+      const cBreed    = pickCol(cols, ["말품종","breed"]);
+      const cOwner    = pickCol(cols, ["마주이름","horse owner","owner"]);
+      const cTrainer  = pickCol(cols, ["조교사이름","trainer"]);
+      const cProducer = pickCol(cols, ["생산자","생산목장","producer"]);
+      const cLast     = pickCol(cols, ["최근경주일","last race date","last_race_date"]);
+
+      const row = rows.find(r => cName && String(r[cName] ?? '').trim() === HORSE);
+      if (!row) return;
+
+      setText('fld-name',     row[cName]);
+      setText('fld-age',      row[cAge]);
+      setText('fld-breed',    row[cBreed]);
+      setText('fld-owner',    row[cOwner]);
+      setText('fld-trainer',  row[cTrainer]);
+      setText('fld-producer', row[cProducer]);
+      setText('fld-last',     row[cLast]);
+    }
+  });
+
+  // 2) /data/horse_racing_prize.csv → 전략(strategy)
+  Papa.parse('/data/horse_racing_prize.csv?v=1', {
+    download: true, header: true, skipEmptyLines: true, encoding: 'utf-8',
+    complete: ({data: rows=[]}) => {
+      if (!rows.length) return;
+      const cols = Object.keys(rows[0] || {});
+      const cHorse    = pickCol(cols, ["horse_name","hrName","hr_name","이름","말이름"]);
+      const cStrategy = pickCol(cols, ["strategy","전략"]);
+      const cDate     = pickCol(cols, ["rc_date","race_date","경주일자","경주일","date","일자"]);
+
+      const sub = rows.filter(r => cHorse && String(r[cHorse] ?? '').trim() === HORSE);
+      if (!sub.length) return;
+
+      let pick = sub[0];
+      if (cDate){
+        pick = sub.map(r => ({ r, d: new Date(String(r[cDate])) }))
+                  .sort((a,b)=> b.d - a.d)[0].r;
+      }
+      setText('fld-strategy', pick[cStrategy]);
+    }
+  });
+})();
+</script>
+
+<script>
+/* ---------------------------
+   연도별 획득 상금(연내 합계 = prize_accumulation sum)
+   + 군집색 막대 + 군집 평균 라인(옵션)
+--------------------------- */
+(function(){
+  const YEARS = [2023, 2024, 2025];
+  const host  = document.getElementById('horseProfilePage');
+  const HORSE = (host?.dataset?.horse || '').trim();
+
+  // 군집 팔레트
+  const clusterColors = {
+    0:'rgba(31,122,91,0.85)', 1:'rgba(42,163,111,0.85)',
+    2:'rgba(92,197,155,0.85)', 3:'rgba(138,219,185,0.85)',
+    4:'rgba(196,232,218,0.85)'
+  };
+
+  function pickCol(cols, aliases){
+    for (const a of aliases){ if (cols.includes(a)) return a; }
+    const lower = cols.map(c => c.toLowerCase());
+    for (const a of aliases){
+      const al=a.toLowerCase(); const i=lower.findIndex(c=>c===al||c.includes(al));
+      if (i>=0) return cols[i];
+    }
+    return null;
+  }
+  async function loadCSV(url){
+    return new Promise(resolve=>{
+      Papa.parse(url,{download:true,header:true,skipEmptyLines:true,encoding:'utf-8',
+        complete:({data})=>resolve(Array.isArray(data)?data:[]), error:()=>resolve([])});
+    });
+  }
+  async function getClusterInfo(horse){
+    const rows = await loadCSV('/data/horse_cluster_map.csv?v=1'); // (있으면 사용)
+    if(!rows.length) return null;
+    const cols=Object.keys(rows[0]||{});
+    const cH=pickCol(cols,["horse_name","말이름","name","hrName","hr_name"]);
+    const cC=pickCol(cols,["cluster","군집"]); const cCN=pickCol(cols,["cluster_name","군집명"]);
+    const hit=rows.find(r=>cH&&String(r[cH]??'').trim()===horse);
+    return hit? {cluster:+hit[cC], name:String(hit[cCN]??`Cluster ${hit[cC]}`)}:null;
+  }
+
+  // ✨ 연도별 "획득 상금" = prize_accumulation의 연도별 합계(해당 해 안의 벌이)
+  function yearlyAccSum(rows, horse){
+    if(!rows.length) return YEARS.map(()=>0);
+    const cols=Object.keys(rows[0]||{});
+    const cH=pickCol(cols,["horse_name","말이름","name","hrName","hr_name"]);
+    const cAcc=pickCol(cols,["prize_accumulation","회차상금","race_prize"]);
+    const cY=pickCol(cols,["year","연도"]); const cD=pickCol(cols,["race_date","rc_date","경주일자","경주일","date"]);
+    if(!(cH&&cAcc&&(cY||cD))) return YEARS.map(()=>0);
+    const sum=new Map(YEARS.map(y=>[y,0]));
+    for(const r of rows){
+      const h=String(r[cH]??'').trim(); if(HORSE&&h!==horse) continue;
+      let y=null;
+      if(cY && r[cY]!=null){ const m=String(r[cY]).match(/\d{4}/); y=m?+m[0]:null; }
+      else if(cD&&r[cD])  { const m=String(r[cD]).match(/\d{4}/); y=m?+m[0]:null; }
+      if(!YEARS.includes(y)) continue;
+      const v=Number(String(r[cAcc]).replace(/[^\d.-]/g,'')||0);
+      sum.set(y,(sum.get(y)||0)+v);
+    }
+    return YEARS.map(y=>sum.get(y)||0);
+  }
+
+  // 동일 군집 평균(연도별 prize_accumulation 합계의 평균)
+  function clusterYearAvg(prizeRows, clusterRows, targetCluster){
+    if(!clusterRows.length) return YEARS.map(()=>0);
+    const cmCols=Object.keys(clusterRows[0]||{});
+    const cH=pickCol(cmCols,["horse_name","말이름","name","hrName","hr_name"]);
+    const cC=pickCol(cmCols,["cluster","군집"]);
+    const horses = clusterRows.filter(r=>+r[cC]===targetCluster).map(r=>String(r[cH]??'').trim());
+    if(!horses.length) return YEARS.map(()=>0);
+    const perY = YEARS.map(()=>[]);
+    for(const h of horses){
+      const vals=yearlyAccSum(prizeRows,h);
+      vals.forEach((v,i)=>perY[i].push(v));
+    }
+    return perY.map(a=> a.length ? Math.round(a.reduce((x,y)=>x+y,0)/a.length) : 0);
+  }
+
+  async function main(){
+    const ctx=document.getElementById('prizeBarChart').getContext('2d');
+    const prizeRows = await loadCSV('/data/horse_racing_prize.csv?v=1');
+    const clInfo    = await getClusterInfo(HORSE); // 없을 수 있음
+
+    const horseVals = yearlyAccSum(prizeRows, HORSE);
+    let clAvg = null;
+    if(clInfo){
+      const cm = await loadCSV('/data/horse_cluster_map.csv?v=1');
+      clAvg = clusterYearAvg(prizeRows, cm, clInfo.cluster);
+    }
+
+    const color = clInfo ? clusterColors[clInfo.cluster] : 'rgba(76,180,120,0.85)';
+    new Chart(ctx,{
+      data:{
+        labels:YEARS.map(String),
+        datasets:[
+          {
+            type:'bar',
+            label:(HORSE?HORSE+' ':'')+'연내 획득 상금',
+            data:horseVals,
+            backgroundColor:color, borderColor:'rgba(56,142,60,1)', borderWidth:1
+          },
+          ...(clAvg ? [{
+            type:'line',
+            label:(clInfo?.cluster_name || '군집 평균'),
+            data:clAvg, borderColor:'rgba(0,0,0,0.55)', tension:0.25,
+            borderDash:[6,4], pointRadius:3, yAxisID:'y'
+          }] : [])
+        ]
+      },
+      options:{
+        responsive:true,
+        plugins:{
+          legend:{display:true},
+          tooltip:{ callbacks:{
+            label:(it)=>{
+              const val = it.parsed.y||0;
+              if(it.dataset.type==='line') return ` ${it.dataset.label}: ${val.toLocaleString()} 원`;
+              let msg = ` ${it.dataset.label}: ${val.toLocaleString()} 원`;
+              if(clAvg){ const d=val-(clAvg[it.dataIndex]||0);
+                msg += ` (군집평균 대비 ${d>=0?'+':''}${d.toLocaleString()} 원)`;
+              }
+              return msg;
+            }
+          }}
+        },
+        scales:{ y:{beginAtZero:true, ticks:{callback:v=>Number(v).toLocaleString()}} }
+      }
+    });
+  }
+  main();
+})();
+</script>
+
+</body>
+</html>
