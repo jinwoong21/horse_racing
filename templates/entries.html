@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>출전상세정보 | Edge Marker Racing</title>
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- DataTables -->
+  <link href="https://cdn.datatables.net/v/bs5/dt-2.0.7/fh-4.0.1/r-3.0.2/datatables.min.css" rel="stylesheet">
+  <!-- Icons -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg:#f7faf8; --ink:#0c1411;
+      --green:#0f3d2e; --border:#e3ece7; --gold:#c6971a;
+      --shadow:0 10px 24px rgba(7,25,18,.08);
+      --row-gray:#f5f5f5;   /* 연그레이 */
+    }
+    body{ background:var(--bg); color:var(--ink); -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; }
+
+    /* 상단 */
+    .topbar{
+      background:linear-gradient(90deg, var(--green), #0d3327);
+      border-bottom:1px solid rgba(255,255,255,.08);
+      color:#fff; position:sticky; top:0; z-index:1000;
+    }
+    .container-narrow{ max-width:1240px; margin-inline:auto; }
+    @media (min-width: 992px){
+      .topbar .container-narrow{ display:flex; align-items:center; }
+      #navMain{ display:flex !important; align-items:center; flex:1 1 auto; }
+    }
+    .navbar-brand{ color:#fff; font-weight:800; text-decoration:none; margin-right:18px; white-space:nowrap;}
+    .navbar-brand i{ color:#c6971a; margin-right:.5rem; }
+    .menu-nav{ gap:32px; margin-right:auto; }
+    .navbar-dark .nav-link{ color:#eaf5f0; font-weight:700; padding:.5rem .9rem; border-radius:8px; display:inline-flex; align-items:center; gap:.4rem; }
+    .navbar-dark .nav-link:hover{ background:#1a3f32; color:#fff; }
+    .navbar-dark .nav-link.active{ background:transparent; color:#fff; border:1px solid rgba(255,255,255,.35); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); }
+    .hdr-tray{ display:flex; align-items:center; gap:.6rem; margin-left:auto; }
+    .hdr-search{ width:280px; }
+    .hdr-search .input-group-text{ background:#eaf5f0; border-color:#d5ebe1; }
+    .hdr-search input{ border-color:#d5ebe1; }
+    .hdr-login{ background:linear-gradient(180deg,#ffd766,#f0c24d); color:#3b2b00; border:1px solid #e8bb44; font-weight:800; box-shadow:var(--shadow); white-space:nowrap; }
+
+    /* 패널 */
+    .page-wrap{ padding:16px 0 24px; }
+    .panel{ background:#fff; border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); }
+    .panel-header{ padding:14px 18px; border-bottom:1px solid var(--border); }
+    .panel-body{ padding:16px 18px; }
+    .page-title{ font-weight:800; color:var(--green); margin-bottom:.25rem; }
+
+    /* 표 */
+    .table-wrap{ max-width:980px; margin:0 auto; }
+    #entriesTable{ table-layout:fixed; font-size:14.5px; }
+    #entriesTable thead th, #entriesTable tbody td { text-align:center; }
+
+    #entriesTable thead th{
+      background:#245b3f; color:#fff;
+      border-bottom:1px solid #1e4f37 !important;
+      padding:.35rem .45rem; white-space:nowrap; font-size:15px;
+    }
+    #entriesTable tbody td{
+      padding:.35rem .45rem; vertical-align:middle; border-color:#eceff2 !important;
+    }
+
+    /* 열 폭 */
+    #entriesTable .col-seq   { width:46px; }
+    #entriesTable .col-date  { width:118px; }
+    #entriesTable .col-no    { width:58px; }
+    #entriesTable .col-grade { width:92px; }
+    #entriesTable .col-dist  { width:72px; }
+    #entriesTable .col-pair  { width:70px; }
+    #entriesTable .col-entry { width:60px; }
+    #entriesTable .col-time  { width:80px; }
+    #entriesTable .col-note  { width:60px; }
+    #entriesTable .col-name  { width:170px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+    /* ✅ 줄무늬 클래스를 확실히 이기도록 !important + 높은 특이성 */
+    #entriesTable.dataTable tbody tr.row-white { background:#ffffff !important; }
+    #entriesTable.dataTable tbody tr.row-gray  { background:var(--row-gray) !important; }
+    #entriesTable.dataTable tbody tr:hover     { background:#eef1f3 !important; }
+
+    /* 숫자 가독성 */
+    #entriesTable .mono{ font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+  </style>
+</head>
+<body>
+
+<nav class="topbar navbar navbar-expand-lg navbar-dark">
+  <div class="container-narrow">
+    <a class="navbar-brand" href="/"><i class="fa-solid fa-horse"></i> Edge Marker Racing</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navMain">
+      <ul class="navbar-nav menu-nav mb-2 mb-lg-0">
+        <li class="nav-item"><a class="nav-link active" href="/entries"><i class="fa-regular fa-clipboard"></i> 출전정보</a></li>
+        <li class="nav-item"><a class="nav-link" href="/results"><i class="fa-regular fa-flag"></i> 레이스결과</a></li>
+        <li class="nav-item"><a class="nav-link" href="/horses"><i class="fa-solid fa-horse-head"></i> 경주마정보</a></li>
+        <li class="nav-item"><a class="nav-link" href="/jockeys"><i class="fa-solid fa-user-ninja"></i> 기수정보</a></li>
+      </ul>
+      <div class="hdr-tray ms-lg-3">
+        <form class="hdr-search d-none d-lg-block" onsubmit="return false;">
+          <div class="input-group input-group-sm">
+            <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
+            <input class="form-control" type="search" placeholder="검색…" aria-label="검색">
+          </div>
+        </form>
+        <a href="/login" class="btn hdr-login btn-sm"><i class="fa-solid fa-right-to-bracket"></i> 로그인</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container-narrow page-wrap">
+  <div class="panel">
+    <div class="panel-header">
+      <h3 class="page-title mb-1">출전상세정보</h3>
+      <div class="subcopy small">entry_details.csv를 그대로 매핑한 표입니다.</div>
+    </div>
+    <div class="panel-body">
+      <div class="table-wrap">
+        <div class="table-responsive">
+          <table id="entriesTable" class="table table-sm align-middle w-100">
+            <thead>
+              <tr>
+                <th class="col-seq">순</th>
+                <th class="col-date">경주일자</th>
+                <th class="col-no">경주</th>
+                <th class="col-grade">등급</th>
+                <th class="col-dist">거리</th>
+                <th class="col-pair">편성</th>
+                <th class="col-entry">출전</th>
+                <th class="col-name">경주명</th>
+                <th class="col-time">출전시각</th>
+                <th class="col-note">비고</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div><!-- /table-wrap -->
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.datatables.net/v/bs5/dt-2.0.7/fh-4.0.1/r-3.0.2/datatables.min.js"></script>
+
+<script>
+  $(function(){
+    $('#entriesTable').DataTable({
+      ajax: { url: '/api/entry_details', dataSrc: (json)=> (json && json.data) ? json.data : [] },
+      columns: [
+        { data: '순',        className:'mono' },
+        { data: '경주일자',  className:'mono' },
+        { data: '경주',      className:'mono' },
+        { data: '등급' },
+        { data: '거리',      className:'mono' },
+        { data: '편성' },
+        { data: '출전' },
+        { data: '경주명', render: (d)=> d ? `<span class="col-name" title="${d}">${d}</span>` : '' },
+        { data: '출전시각',  className:'mono' },
+        { data: null, defaultContent:'' }
+      ],
+      order: [[1,'desc'], [2,'asc']],
+      fixedHeader: true,
+      responsive: true,
+      pageLength: 12,
+      lengthMenu: [[12, 25, 50, 100], [12, 25, 50, 100]],
+      language: { url: "https://cdn.datatables.net/plug-ins/1.13.7/i18n/ko.json" },
+      autoWidth: false,
+
+      // DataTables 자체 줄무늬는 끄고(rowCallback에서 직접 지정)
+      stripeClasses: [],
+
+      // ✅ 페이지 전환/정렬/검색 등 모든 draw 순간마다 줄무늬 강제 적용
+      rowCallback: function(row, data, displayNum, displayIndex, dataIndex){
+        // displayIndex : 현재 페이지 내에서의 0,1,2,3...
+        row.classList.remove('row-white','row-gray','odd','even');
+        if (displayIndex % 2 === 0) {
+          row.classList.add('row-white'); // 화이트
+        } else {
+          row.classList.add('row-gray');  // 연그레이
+        }
+      }
+    });
+  });
+</script>
+
+</body>
+</html>
